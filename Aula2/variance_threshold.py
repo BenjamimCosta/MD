@@ -1,7 +1,6 @@
 import numpy as np
-#from Aula1.dataset import Dataset
 import sys
-sys.path.insert(1, 'D:/Universidade/MD/Aula1')
+sys.path.insert(1, './Aula1')
 from dataset import Dataset
 class VarianceThreshold:
     '''
