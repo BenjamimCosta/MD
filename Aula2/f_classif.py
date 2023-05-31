@@ -1,22 +1,20 @@
 import numpy as np
-import sys
-sys.path.insert(1, './Aula1')
-from dataset import Dataset
 from scipy.stats import f_oneway
 
-def f_classif(dataset : Dataset):
-    # Agrupar as samples/exemplos por classes tendo em conta os valores do target.
-    classes = np.unique(dataset.get_y())
-    grouped_features_values = [dataset.get_X()[dataset.get_y() == classe] for classe in classes]
-    print(grouped_features_values)
-    # Aplicar ANOVA aos elementos das diferentes classes para analisar a variância (diferença da média) entre essas classes, por coluna.
-    # Dá nan quando todos os elementos são iguais, visto que não há variância.
-    num_columns = dataset.X.shape[1]
-    f_values, p_values = [],[]
-    for i in range(num_columns):
-        f, p = f_oneway(*[X[:, i] for X in grouped_features_values])
-        f_values.append(f)
-        p_values.append(p)
-
-    return f_values,p_values
-
+def f_classif(X, y):
+    # Garantir que X e y são arrays numpy
+    #X = np.asarray(X)
+    #y = np.asarray(y)
+    # Obter o número de features e o número de classes
+    n_features = X.shape[1]
+    n_classes = len(np.unique(y))
+    # Inicializar os arrays para armazenar os valores de F e p
+    F = np.zeros(n_features)
+    p = np.zeros(n_features)
+    # Para cada feature:
+    for i in range(n_features):
+        # Agrupar as amostras pela classe
+        groups = [X[y == c, i] for c in range(n_classes)]
+        # Aplicar a função f_oneway aos grupos
+        F[i], p[i] = f_oneway(*groups)
+    return F, p
