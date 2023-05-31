@@ -8,6 +8,21 @@ class Node:
         self.value = value # valor do nó (elemento mais frequente ou média) se for folha
         self.left = left # subárvore à esquerda do nó
         self.right = right # subárvore à direita do nó
+        
+    def __repr__(self):
+        lines = []
+        def _helper(node, level):
+            if node is None:
+                return
+            lines.append('  ' * level + f'[{node.feature_index} ≤ {node.threshold}]')
+            lines.append('  ' * (level + 1) + f'├─> [True: {node.left.value if node.left else None}]')
+            _helper(node.left, level + 2)
+            lines.append('  ' * (level + 1) + f'└─> [False: {node.right.value if node.right else None}]')
+            _helper(node.right, level + 2)
+        _helper(self, 0)
+        return '\n'.join(lines)
+
+
 
 def _most_common_label(y):
     # Retornar o elemento mais frequente no vetor y
@@ -96,6 +111,8 @@ def _split(X_column, threshold):
     return left_indices, right_indices
 
 
+
+
 class DecisionTree:
     def __init__(self, criterion='entropy', max_depth=None, min_samples_split=2, max_leaf_nodes=20):
         self.criterion = criterion  # critério de divisão: 'entropy', 'gini' ou 'gain_ratio'
@@ -162,7 +179,7 @@ class DecisionTree:
                     split_threshold = threshold
 
         return split_index, split_threshold
-
+    
 # Classe de teste
 class TestDecisionTree():
 
@@ -184,6 +201,8 @@ class TestDecisionTree():
         dt = DecisionTree(max_depth=50)
         dt.fit(X_train, y_train)
         y_pred = dt.predict(X_test)
+        print("Arvore:")
+        print(dt.tree_)
         
         print("y:", y_test, "\ny_pred:", y_pred)
         acc = accuracy_score(y_test, y_pred)
