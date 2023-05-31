@@ -1,10 +1,9 @@
 import numpy as np
-import unittest
 from sklearn.metrics import accuracy_score, precision_score
 
 class Node:
     def __init__(self, feature_index=None, threshold=None, value=None, left=None, right=None):
-        self.feature_index = feature_index # índice da característica usada para a divisão
+        self.feature_index = feature_index # índice da feature usada para a divisão
         self.threshold = threshold # valor do limite usado para a divisão
         self.value = value # valor do nó (elemento mais frequente ou média) se for folha
         self.left = left # subárvore à esquerda do nó
@@ -15,7 +14,7 @@ def _most_common_label(y):
     unique, counts = np.unique(y, return_counts=True)
     # Obter os índices dos elementos com a maior contagem
     max_indices = np.argwhere(counts == counts.max()).flatten()
-    # Se houver mais de um elemento com a maior contagem, escolher um aleatoriamente -> (Majority Voting) <-
+    # Se houver mais de um elemento com a maior contagem, escolher um aleatoriamente 
     if len(max_indices) > 1:
         max_index = np.random.choice(max_indices)
     else:
@@ -45,7 +44,7 @@ def _gini_index(y):
     return gini_index
 
 def _information_gain(y, X_column, threshold, criterion):
-    # Calcular o ganho de informação de um critério de divisão usando a entropia como medida de impureza
+    # Calcular o ganho de informação de um critério de divisão usando a entropia ou gini como medida de impureza
     if criterion == 'entropy':
         parent = _entropy(y)
     elif criterion == 'gini':
@@ -56,7 +55,7 @@ def _information_gain(y, X_column, threshold, criterion):
     if len(left_indices) == 0 or len(right_indices) == 0:
         return 0
 
-    # Calcular a entropia ponderada dos subconjuntos
+    # Calcular a entropia/gini ponderada dos subconjuntos
     n = len(y)
     len_left, len_right = len(left_indices), len(right_indices)
     if criterion == 'entropy':
@@ -105,30 +104,31 @@ class DecisionTree:
         self.max_leaf_nodes = max_leaf_nodes # número máximo de leaf nodes na árvore (para pre-prunning -> Maximum Depth Cutof)
 
     def fit(self, X, y):
-        self.tree_ = self._grow_tree(X, y, 0, 0)
+        self.tree_, leafs = self._grow_tree(X, y, 0)
+        #print(leafs)
 
     def predict(self, X):
         return [self._predict(inputs) for inputs in X]
 
-    def _grow_tree(self, X, y, depth, n_leafs):
+    def _grow_tree(self, X, y, depth):
+        n_leafs = 0
         n_samples, n_features = X.shape
         n_labels = len(np.unique(y))
         if (depth > self.max_depth or n_labels == 1 or n_samples < self.min_samples_split or n_leafs >= self.max_leaf_nodes):
             leaf_value = _most_common_label(y)
-            n_leafs += 1 #n_leafs n esta bem
-            return Node(value=leaf_value)
-        
+            return Node(value=leaf_value), 1
         feature_indices = np.arange(n_features)
         best_feature, best_threshold = self._best_criteria(X, y, feature_indices)
         left_indices, right_indices = _split(X[:, best_feature], best_threshold)
 
-        left = self._grow_tree(X[left_indices, :], y[left_indices], depth+1, n_leafs) #X[left_indices, :] -> linhas com os left_indices e todas as colunas dessas linhas
-        right = self._grow_tree(X[right_indices, :], y[right_indices], depth+1, n_leafs)
+        left,left_leaf = self._grow_tree(X[left_indices, :], y[left_indices], depth+1) 
+        right,right_leaf = self._grow_tree(X[right_indices, :], y[right_indices], depth+1)
+
+        n_leafs += (left_leaf + right_leaf)
 
         # Atribuir um valor ao nó usando o método _most_common_label
         node_value = _most_common_label(y)
-        print(depth)
-        return Node(best_feature, best_threshold, node_value, left, right)
+        return Node(best_feature, best_threshold, node_value, left, right), n_leafs
 
     def _predict(self, inputs):
         node = self.tree_
@@ -140,7 +140,6 @@ class DecisionTree:
             else:
                 node = node.right
         return node.value
-
 
     def _best_criteria(self, X, y, feature_indices):
         best_gain = -1
@@ -164,32 +163,31 @@ class DecisionTree:
 
         return split_index, split_threshold
 
-
 # Classe de teste
-class TestDecisionTree(unittest.TestCase):
-
-    # Gerar um conjunto de dados aleatório
-    def generate_random_dataset(self, n_samples, n_features, n_classes):
-        # Gerando as características aleatoriamente
-        X = np.random.rand(n_samples, n_features)
-        # Gerando os labels aleatoriamente
-        y = np.random.randint(0, n_classes, size=n_samples)
-        return X, y
-
+class TestDecisionTree():
 
     def test_predict(self):
-        X, y = self.generate_random_dataset(100, 10, 2)
-        # Instanciar um objeto da classe DecisionTree
-        dt = DecisionTree(max_depth=5)
-        # Chamar o método fit
-        dt.fit(X, y)
-        # Chamar o o método predict
-        y_pred = dt.predict(X)
-        # Verificar se o vetor y_pred tem o mesmo tamanho que o vetor y
-        self.assertEqual(len(y_pred), len(y))
-        print("y:", y, "\ny_pred:", y_pred)
-        acc = accuracy_score(y, y_pred)
-        prec = precision_score(y, y_pred)
+        X = np.random.randint(1, 100 ,size=(100, 6)) 
+        y = np.random.randint(0, 2, size=100) 
+        # Dividir os dados em treino e teste com proporção de 75/25
+        n_samples = X.shape[0]
+        n_train = int(n_samples * 0.75)
+        # Gerar índices aleatórios para os dados de treino e teste
+        train_indices = np.random.choice(np.arange(n_samples), size=n_train, replace=False)
+        test_indices = np.setdiff1d(np.arange(n_samples), train_indices)
+
+        X_train = X[train_indices]
+        y_train = y[train_indices]
+        X_test = X[test_indices]
+        y_test = y[test_indices]
+
+        dt = DecisionTree(max_depth=50)
+        dt.fit(X_train, y_train)
+        y_pred = dt.predict(X_test)
+        
+        print("y:", y_test, "\ny_pred:", y_pred)
+        acc = accuracy_score(y_test, y_pred)
+        prec = precision_score(y_test, y_pred)
         print("Acurácia:", acc, "\nPrecisão:", prec)
 
 def main():
