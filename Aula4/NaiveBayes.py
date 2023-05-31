@@ -40,6 +40,7 @@ from sklearn import datasets
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
 
+
 iris = datasets.load_iris()
 X = iris.data
 y = iris.target
@@ -55,3 +56,19 @@ for i in range(n_tests):
     accuracy[i] = accuracy_score(y_test, y_pred)
 
 print('Average accuracy:', np.mean(accuracy))
+
+from sklearn.naive_bayes import GaussianNB
+iris = datasets.load_iris()
+X = iris.data
+y = iris.target
+n_tests = 10
+accuracy = np.zeros(n_tests)
+
+for i in range(n_tests):
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
+    nb = GaussianNB()
+    nb.fit(X_train, y_train)
+    y_pred = nb.predict(X_test)
+    accuracy[i] = accuracy_score(y_test, y_pred)
+
+print('Average accuracy Sklearn:', np.mean(accuracy))
